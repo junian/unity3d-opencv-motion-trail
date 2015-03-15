@@ -4,8 +4,11 @@ using System.Runtime.InteropServices;
 
 public class MotionTrailViewer : MonoBehaviour {
 
+	float timeCounter = 0f;
+	float fps = 1f / 10f;
+
 	[DllImport ("__Internal")]
-	private static extern void MotionTrail(System.IntPtr currentColors, System.IntPtr prevColors, int width, int height, int hCycle);
+	private static extern void MotionTrail(System.IntPtr currentColors, System.IntPtr prevColors, int width, int height);
 
 	WebCamTexture webcamTexture;
 	Texture2D texture = null;
@@ -22,6 +25,10 @@ public class MotionTrailViewer : MonoBehaviour {
 
 	void Update() {
 		if (webcamTexture.didUpdateThisFrame) {
+			timeCounter += Time.deltaTime;
+			if(timeCounter < fps)
+				return;
+			timeCounter = 0f;
 			Color32[] pixels = webcamTexture.GetPixels32 ();
 			if(prevTexture == null)
 			{
@@ -39,7 +46,7 @@ public class MotionTrailViewer : MonoBehaviour {
 			prevTexture.Apply();
 
 			GCHandle currentPixelHandle = GCHandle.Alloc (pixels, GCHandleType.Pinned);
-			MotionTrail (currentPixelHandle.AddrOfPinnedObject (), prevPixelHandle.AddrOfPinnedObject(), webcamTexture.width, webcamTexture.height, 0);
+			MotionTrail (currentPixelHandle.AddrOfPinnedObject (), prevPixelHandle.AddrOfPinnedObject(), webcamTexture.width, webcamTexture.height);
 
 			Destroy(texture);
 			texture = new Texture2D (webcamTexture.width, webcamTexture.height);
