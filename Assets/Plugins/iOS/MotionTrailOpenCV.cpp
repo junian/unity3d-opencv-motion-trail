@@ -10,12 +10,12 @@ extern "C"
 }
 
 // various tracking parameters (in seconds)
-const double MHI_DURATION = 1;
+const double MHI_DURATION = 0.1;
 const double MAX_TIME_DELTA = 0.5;
 const double MIN_TIME_DELTA = 0.05;
 // number of cyclic frame buffer used for motion detection
 // (should, probably, depend on FPS)
-const int N = 4;
+const int N = 5;
 
 // ring image buffer
 IplImage **buf = 0;
@@ -39,13 +39,6 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
     int i, idx1 = last, idx2;
     IplImage* silh;
     CvSeq* seq;
-    CvRect comp_rect;
-    double count;
-    double angle;
-    CvPoint center;
-    double magnitude;
-    CvScalar color;
-    
     // allocate images at the beginning or
     // reallocate them if the frame size is changed
     if( !mhi || mhi->width != size.width || mhi->height != size.height ) {
@@ -103,49 +96,49 @@ static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
     // iterate through the motion components,
     // One more iteration (i == -1) corresponds to the whole image (global motion)
     /*for( i = -1; i < seq->total; i++ ) {
-        
-        if( i < 0 ) { // case of the whole image
-            comp_rect = cvRect( 0, 0, size.width, size.height );
-            color = CV_RGB(255,255,255);
-            magnitude = 100;
-        }
-        else { // i-th motion component
-            comp_rect = ((CvConnectedComp*)cvGetSeqElem( seq, i ))->rect;
-            if( comp_rect.width + comp_rect.height < 100 ) // reject very small components
-                continue;
-            color = CV_RGB(255,0,0);
-            magnitude = 30;
-        }
-        
-        // select component ROI
-        cvSetImageROI( silh, comp_rect );
-        cvSetImageROI( mhi, comp_rect );
-        cvSetImageROI( orient, comp_rect );
-        cvSetImageROI( mask, comp_rect );
-        
-        // calculate orientation
-        angle = cvCalcGlobalOrientation( orient, mask, mhi, timestamp, MHI_DURATION);
-        angle = 360.0 - angle;  // adjust for images with top-left origin
-        
-        count = cvNorm( silh, 0, CV_L1, 0 ); // calculate number of points within silhouette ROI
-        
-        cvResetImageROI( mhi );
-        cvResetImageROI( orient );
-        cvResetImageROI( mask );
-        cvResetImageROI( silh );
-        
-        // check for the case of little motion
-        if( count < comp_rect.width*comp_rect.height * 0.05 )
-            continue;
-        
-        // draw a clock with arrow indicating the direction
-        center = cvPoint( (comp_rect.x + comp_rect.width/2),
-                         (comp_rect.y + comp_rect.height/2) );
-        
-        cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
-        cvLine( dst, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
-                                     cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
-    }*/
+     
+     if( i < 0 ) { // case of the whole image
+     comp_rect = cvRect( 0, 0, size.width, size.height );
+     color = CV_RGB(255,255,255);
+     magnitude = 100;
+     }
+     else { // i-th motion component
+     comp_rect = ((CvConnectedComp*)cvGetSeqElem( seq, i ))->rect;
+     if( comp_rect.width + comp_rect.height < 100 ) // reject very small components
+     continue;
+     color = CV_RGB(255,0,0);
+     magnitude = 30;
+     }
+     
+     // select component ROI
+     cvSetImageROI( silh, comp_rect );
+     cvSetImageROI( mhi, comp_rect );
+     cvSetImageROI( orient, comp_rect );
+     cvSetImageROI( mask, comp_rect );
+     
+     // calculate orientation
+     angle = cvCalcGlobalOrientation( orient, mask, mhi, timestamp, MHI_DURATION);
+     angle = 360.0 - angle;  // adjust for images with top-left origin
+     
+     count = cvNorm( silh, 0, CV_L1, 0 ); // calculate number of points within silhouette ROI
+     
+     cvResetImageROI( mhi );
+     cvResetImageROI( orient );
+     cvResetImageROI( mask );
+     cvResetImageROI( silh );
+     
+     // check for the case of little motion
+     if( count < comp_rect.width*comp_rect.height * 0.05 )
+     continue;
+     
+     // draw a clock with arrow indicating the direction
+     center = cvPoint( (comp_rect.x + comp_rect.width/2),
+     (comp_rect.y + comp_rect.height/2) );
+     
+     cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
+     cvLine( dst, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
+     cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
+     }*/
 }
 
 void MotionTrail(char* currentData, char* prevData, int width, int height)
@@ -164,7 +157,7 @@ void MotionTrail(char* currentData, char* prevData, int width, int height)
     Mat prevMat = Mat(prevImage);
     Mat trailsMat = Mat(trailsImage);
     
-    add(trailsMat, currentMat, currentMat);
+    addWeighted( currentMat, 1.0, trailsMat, 0.3, 0.0, currentMat);
     
     cvReleaseImageHeader(&currentImage);
     cvReleaseImageHeader(&prevImage);
